@@ -10,6 +10,7 @@ import (
 
 var db *sql.DB
 
+// InitDB inicializa a conexão real com o banco de dados.
 func InitDB() error {
 	dbUser := os.Getenv("DB_USER")
 	dbPassword := os.Getenv("DB_PASSWORD")
@@ -33,6 +34,12 @@ func InitDB() error {
 	return nil
 }
 
+// DBConn retorna a instância do banco de dados.
 func DBConn() *sql.DB {
 	return db
+}
+
+// SetDB é usado em testes para substituir a conexão real do banco de dados por uma simulada.
+func SetDB(mockDB *sql.DB) {
+	db = mockDB
 }
