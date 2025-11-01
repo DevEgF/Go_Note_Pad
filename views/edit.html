@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Note</title>
+</head>
+<body>
+    <h1>Edit Note</h1>
+    <form action="/notes/update/{{.ID}}" method="POST">
+        <div>
+            <label>Title</label>
+            <input type="text" name="title" value="{{.Title}}" required>
+        </div>
+        <div>
+            <label>Content</label>
+            <textarea name="content" required>{{.Content}}</textarea>
+        </div>
+        <div>
+            <button type="submit">Update</button>
+        </div>
+    </form>
+</body>
+</html>
