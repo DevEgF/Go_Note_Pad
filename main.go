@@ -1,25 +1,25 @@
 package main
 
 import (
-	"log"
-	"net/http"
 	"go_note_pad/config"
 	"go_note_pad/controllers"
+	"log"
+	"net/http"
 )
 
 func main() {
-	err := config.InitDB()
-	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+	// Inicializa o banco de dados e lida com erros de conexão
+	if err := config.InitDB(); err != nil {
+		log.Fatalf("Falha ao conectar ao banco de dados: %v", err)
 	}
 
-	http.HandleFunc("/", controllers.Index)
-	http.HandleFunc("/notes/new", controllers.NewNote)
-	http.HandleFunc("/notes/save", controllers.SaveNote)
-	http.HandleFunc("/notes/edit/", controllers.EditNote)
-	http.HandleFunc("/notes/update/", controllers.UpdateNote)
-	http.HandleFunc("/notes/delete/", controllers.DeleteNote)
+	// Define os manipuladores para os endpoints da API
+	http.HandleFunc("/notes", controllers.NotesHandler)
+	http.HandleFunc("/notes/", controllers.NoteHandler)
 
-	log.Println("Server started on: http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	// Inicia o servidor na porta 8080
+	log.Println("Servidor iniciado em: http://localhost:8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatalf("Falha ao iniciar o servidor: %v", err)
+	}
 }

@@ -1,15 +1,15 @@
 package models
 
 import (
-	"time"
 	"go_note_pad/config"
+	"time"
 )
 
 type Note struct {
-	ID        int
-	Title     string
-	Content   string
-	CreatedAt time.Time
+	ID        int       `json:"id"`
+	Title     string    `json:"title"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func GetNotes() ([]Note, error) {
@@ -24,8 +24,7 @@ func GetNotes() ([]Note, error) {
 	var notes []Note
 	for rows.Next() {
 		var note Note
-		err := rows.Scan(&note.ID, &note.Title, &note.Content, &note.CreatedAt)
-		if err != nil {
+		if err := rows.Scan(&note.ID, &note.Title, &note.Content, &note.CreatedAt); err != nil {
 			return nil, err
 		}
 		notes = append(notes, note)
@@ -38,7 +37,8 @@ func GetNote(id int) (Note, error) {
 	db := config.DBConn()
 
 	var note Note
-	err := db.QueryRow("SELECT id, title, content, created_at FROM notes WHERE id = ?", id).Scan(&note.ID, &note.Title, &note.Content, &note.CreatedAt)
+	err := db.QueryRow("SELECT id, title, content, created_at FROM notes WHERE id = ?", id).
+		Scan(&note.ID, &note.Title, &note.Content, &note.CreatedAt)
 	if err != nil {
 		return Note{}, err
 	}
@@ -46,11 +46,22 @@ func GetNote(id int) (Note, error) {
 	return note, nil
 }
 
-func CreateNote(note Note) error {
+func CreateNote(note Note) (Note, error) {
 	db := config.DBConn()
 
-	_, err := db.Exec("INSERT INTO notes (title, content, created_at) VALUES (?, ?, ?)", note.Title, note.Content, time.Now())
-	return err
+	// O campo created_at é definido como padrão pelo banco de dados, então não o incluímos na inserção.
+	result, err := db.Exec("INSERT INTO notes (title, content) VALUES (?, ?)", note.Title, note.Content)
+	if err != nil {
+		return Note{}, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return Note{}, err
+	}
+
+	// Busca a nota recém-criada para obter todos os campos, incluindo o ID e CreatedAt gerados.
+	return GetNote(int(id))
 }
 
 func UpdateNote(note Note) error {
