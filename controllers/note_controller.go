@@ -3,18 +3,25 @@ package controllers
 import (
 	"encoding/json"
 	"go_note_pad/models"
+	"go_note_pad/repository"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
-// respondWithError é uma função auxiliar para escrever uma resposta de erro JSON.
+type NoteController struct {
+	Repo repository.NoteRepository
+}
+
+func NewNoteController(repo repository.NoteRepository) *NoteController {
+	return &NoteController{Repo: repo}
+}
+
 func respondWithError(w http.ResponseWriter, code int, message string) {
 	respondWithJSON(w, code, map[string]string{"error": message})
 }
 
-// respondWithJSON é uma função auxiliar para escrever uma resposta JSON.
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	response, err := json.Marshal(payload)
 	if err != nil {
@@ -26,20 +33,18 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(response)
 }
 
-// NotesHandler lida com todas as solicitações para /notes
-func NotesHandler(w http.ResponseWriter, r *http.Request) {
+func (c *NoteController) NotesHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		getNotes(w, r)
+		c.getNotes(w, r)
 	case http.MethodPost:
-		createNote(w, r)
+		c.createNote(w, r)
 	default:
 		respondWithError(w, http.StatusMethodNotAllowed, "Método não permitido")
 	}
 }
 
-// NoteHandler lida com todas as solicitações para /notes/{id}
-func NoteHandler(w http.ResponseWriter, r *http.Request) {
+func (c *NoteController) NoteHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/notes/")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -49,18 +54,18 @@ func NoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		getNote(w, r, id)
+		c.getNote(w, r, id)
 	case http.MethodPut:
-		updateNote(w, r, id)
+		c.updateNote(w, r, id)
 	case http.MethodDelete:
-		deleteNote(w, r, id)
+		c.deleteNote(w, r, id)
 	default:
 		respondWithError(w, http.StatusMethodNotAllowed, "Método não permitido")
 	}
 }
 
-func getNotes(w http.ResponseWriter, r *http.Request) {
-	notes, err := models.GetNotes()
+func (c *NoteController) getNotes(w http.ResponseWriter, r *http.Request) {
+	notes, err := c.Repo.FindAll()
 	if err != nil {
 		log.Println(err)
 		respondWithError(w, http.StatusInternalServerError, "Erro Interno do Servidor")
@@ -69,7 +74,7 @@ func getNotes(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, notes)
 }
 
-func createNote(w http.ResponseWriter, r *http.Request) {
+func (c *NoteController) createNote(w http.ResponseWriter, r *http.Request) {
 	var note models.Note
 	if err := json.NewDecoder(r.Body).Decode(&note); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Carga de solicitação inválida")
@@ -77,7 +82,7 @@ func createNote(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	newNote, err := models.CreateNote(note)
+	newNote, err := c.Repo.Create(note)
 	if err != nil {
 		log.Println(err)
 		respondWithError(w, http.StatusInternalServerError, "Erro Interno do Servidor")
@@ -86,8 +91,8 @@ func createNote(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, newNote)
 }
 
-func getNote(w http.ResponseWriter, r *http.Request, id int) {
-	note, err := models.GetNote(id)
+func (c *NoteController) getNote(w http.ResponseWriter, r *http.Request, id int) {
+	note, err := c.Repo.FindByID(id)
 	if err != nil {
 		log.Println(err)
 		respondWithError(w, http.StatusNotFound, "Nota não encontrada")
@@ -96,7 +101,7 @@ func getNote(w http.ResponseWriter, r *http.Request, id int) {
 	respondWithJSON(w, http.StatusOK, note)
 }
 
-func updateNote(w http.ResponseWriter, r *http.Request, id int) {
+func (c *NoteController) updateNote(w http.ResponseWriter, r *http.Request, id int) {
 	var note models.Note
 	if err := json.NewDecoder(r.Body).Decode(&note); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Carga de solicitação inválida")
@@ -105,7 +110,7 @@ func updateNote(w http.ResponseWriter, r *http.Request, id int) {
 	defer r.Body.Close()
 	note.ID = id
 
-	if err := models.UpdateNote(note); err != nil {
+	if err := c.Repo.Update(note); err != nil {
 		log.Println(err)
 		respondWithError(w, http.StatusInternalServerError, "Erro Interno do Servidor")
 		return
@@ -113,8 +118,8 @@ func updateNote(w http.ResponseWriter, r *http.Request, id int) {
 	respondWithJSON(w, http.StatusOK, note)
 }
 
-func deleteNote(w http.ResponseWriter, r *http.Request, id int) {
-	if err := models.DeleteNote(id); err != nil {
+func (c *NoteController) deleteNote(w http.ResponseWriter, r *http.Request, id int) {
+	if err := c.Repo.Delete(id); err != nil {
 		log.Println(err)
 		respondWithError(w, http.StatusInternalServerError, "Erro Interno do Servidor")
 		return
